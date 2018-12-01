@@ -991,16 +991,18 @@ public class AWSAppSyncClient {
         let deltaQuery = EmptyQuery.init()
         let deltaCallback: (GraphQLResult<EmptyQuery.Data>?, ApolloStore.ReadTransaction?, Error?) -> Void =  { (_, _, _) in
         }
-        
-        return AppSyncSubscriptionWithSync<EmptySubscription, BaseQuery, DeltaQuery>.init(appsyncClient: self,
-                                      baseQuery: baseQuery,
-                                      deltaQuery: deltaQuery,
-                                      subscription: subscription,
-                                      baseQueryHandler: baseQueryResultHandler,
-                                      deltaQueryHandler: deltaCallback,
-                                      subscriptionResultHandler: subscriptionResultHandler,
-                                      subscriptionMetadataCache: self.subscriptionMetadataCache,
-                                      syncConfiguration: syncConfiguration, handlerQueue: callbackQueue) as Cancellable
+
+        return AppSyncSubscriptionWithSync<Subscription, BaseQuery, EmptyQuery>(
+            appsyncClient: self,
+            baseQuery: baseQuery,
+            deltaQuery: deltaQuery,
+            subscription: subscription,
+            baseQueryHandler: baseQueryResultHandler,
+            deltaQueryHandler: deltaCallback,
+            subscriptionResultHandler: subscriptionResultHandler,
+            subscriptionMetadataCache: self.subscriptionMetadataCache,
+            syncConfiguration: syncConfiguration,
+            handlerQueue: callbackQueue) as Cancellable
     }
     
     /// Performs a sync operation where a subscription is initiated for real-time updates and a base query or a delta query is used to fetch data from the server.
