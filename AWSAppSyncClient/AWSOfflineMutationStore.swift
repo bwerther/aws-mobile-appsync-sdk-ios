@@ -132,7 +132,10 @@ public class AWSAppSyncOfflineMutationCache {
 class MutationExecutor: NetworkConnectionNotification {
     
     var mutationQueue = [AWSAppSyncMutationRecord]()
+
     let dispatchGroup = DispatchGroup()
+    let dispatchQueue = DispatchQueue(label: "MutationExecutorQueue", qos: .default)
+
     var isExecuting = false
     var shouldExecute = true
     
@@ -158,8 +161,8 @@ class MutationExecutor: NetworkConnectionNotification {
             do {
                 self.persistentCache = try AWSMutationCache(fileURL: fileURL)
                 try self.loadPersistedData()
-            } catch let error {
-                print("Error persisting cache: \(error.localizedDescription)")
+                resumeMutationExecutionsIfPossible()
+            } catch {
             }
         }
     }
@@ -287,23 +290,33 @@ class MutationExecutor: NetworkConnectionNotification {
         shouldExecute = true
         executeAllQueuedMutations()
     }
-    
-    // executes all queued mutations synchronously
+
     func executeAllQueuedMutations() {
-        if !isExecuting {
-            isExecuting = true
-            while !mutationQueue.isEmpty {
-                if (shouldExecute) {
-                    executeMutation(mutation: mutationQueue.first!)
-                    currentMutation = mutationQueue.first
-                } else {
-                    // halt execution
-                    break
-                }
-            }
-            // update status to not executing
-            isExecuting = false
+        dispatchQueue.async(flags: .barrier) {
+            self.executeAllQueuedMutationsSync()
+        }
+    }
+
+    private func resumeMutationExecutionsIfPossible() {
+        guard snapshotProcessController.shouldExecuteOperation(operation: .mutation) else {
+            return
+        }
+
+        executeAllQueuedMutations()
+    }
+
+    private func executeAllQueuedMutationsSync() {
+        guard shouldExecute else { return }
+        guard !isExecuting else { return }
+
+        isExecuting = true
+        defer { isExecuting = false }
+
+        while let mutation = mutationQueue.first {
+            guard shouldExecute else { break }
+
+            currentMutation = mutation
+            executeMutation(mutation: mutation)
         }
     }
 }
-
