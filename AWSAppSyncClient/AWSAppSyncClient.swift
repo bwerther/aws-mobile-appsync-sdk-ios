@@ -971,6 +971,37 @@ public class AWSAppSyncClient {
                                       subscriptionMetadataCache: self.subscriptionMetadataCache,
                                       syncConfiguration: syncConfiguration, handlerQueue: callbackQueue)
     }
+
+    /// Performs a sync operation where a delta query is initiated for missed updates and a base query  is used to fetch primary data from the server.
+    ///
+    /// - Parameters:
+    ///   - baseQuery: The base query to fetch which contains the primary data.
+    ///   - baseQueryResultHandler: Closure that is called when base query results are available or when an error occurs. Every time a sync operation is called, a fetch for the baseQuery from the cache will be done first before initiating any other operations.
+    ///   - subscription: The subscription which will provide real time updates.
+    ///   - subscriptionResultHandler: Closure that is called when a real time update is available or when an error occurs.
+    ///   - syncConfiguration: The sync configuration where the baseQuery sync interval can be specified. (Defaults to 24 hours.)
+    /// - Returns: An object that can be used to cancel the sync operation.
+    public func sync<BaseQuery: GraphQLQuery, Subscription: GraphQLSubscription>(
+        baseQuery: BaseQuery,
+        baseQueryResultHandler: @escaping OperationResultHandler<BaseQuery>,
+        subscription: Subscription,
+        subscriptionResultHandler: @escaping SubscriptionResultHandler<Subscription>,
+        callbackQueue: DispatchQueue = DispatchQueue.main,
+        syncConfiguration: SyncConfiguration = SyncConfiguration.defaultSyncConfiguration()) -> Cancellable {
+        let deltaQuery = EmptyQuery.init()
+        let deltaCallback: (GraphQLResult<EmptyQuery.Data>?, ApolloStore.ReadTransaction?, Error?) -> Void =  { (_, _, _) in
+        }
+        
+        return AppSyncSubscriptionWithSync<EmptySubscription, BaseQuery, DeltaQuery>.init(appsyncClient: self,
+                                      baseQuery: baseQuery,
+                                      deltaQuery: deltaQuery,
+                                      subscription: subscription,
+                                      baseQueryHandler: baseQueryResultHandler,
+                                      deltaQueryHandler: deltaCallback,
+                                      subscriptionResultHandler: subscriptionResultHandler,
+                                      subscriptionMetadataCache: self.subscriptionMetadataCache,
+                                      syncConfiguration: syncConfiguration, handlerQueue: callbackQueue) as Cancellable
+    }
     
     /// Performs a sync operation where a subscription is initiated for real-time updates and a base query or a delta query is used to fetch data from the server.
     ///
