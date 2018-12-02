@@ -8,7 +8,7 @@ target 'AWSAppSync' do
   pod 'AWSCore', '~> 2.7.0'
   pod 'SQLite.swift', '0.11.4'
   pod 'ReachabilitySwift', '~> 4.3.0'
-  pid 'SwiftyBeaver'
+  pod 'SwiftyBeaver'
 
   target 'ApolloTests' do
   end
